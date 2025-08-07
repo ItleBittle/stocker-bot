@@ -1,5 +1,4 @@
 #Stocker Bot v1.0
-#(c) @itlebittle 2025
 
 import discord
 from discord.ext import commands
@@ -208,3 +207,4 @@ def run_server():
     server.serve_forever()
 
 threading.Thread(target=run_server).start()
+
