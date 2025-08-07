@@ -20,11 +20,16 @@ bot = commands.Bot(command_prefix="$", intents=intents)
 
 bankfile = "bank.json"
 
+startbalance = 100
+
 def loadbank():
     if not os.path.exists(bankfile):
         return {}
-    with open(bankfile, "r") as f:
-        return json.load(f)
+    try:
+        with open(bankfile, "r") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        return {}
 
 def savebank(data):
     with open(bankfile, "w") as f:
@@ -32,8 +37,9 @@ def savebank(data):
 
 def start(username):
     bank = loadbank()
-    bank[username] = {"balance": 100}
-    savebank(bank)
+    if username not in bank: #definition of paranoid
+        bank[username] = {"balance": startbalance}
+        savebank(bank)
 
 @bot.event
 async def on_ready():
@@ -44,7 +50,12 @@ async def on_ready():
         help="Shows the current price of a stock."
 )
 async def price(ctx, ticker: str):
-    await ctx.reply(f"Current stock price of {ticker.upper()}: ${round(yf.Ticker(ticker).history(period="1d")["Close"].iloc[0], 2)}")
+    try:
+        price = round(yf.Ticker(ticker).history(period="1d")["Close"].iloc[0], 2)
+    except IndexError:
+        await ctx.reply("No data found on given ticker, possibly delisted.")
+        return
+    await ctx.reply(f"Current stock price of {ticker.upper()}: ${price}")
 
 @bot.command(
         name="balance",
@@ -54,13 +65,13 @@ async def balance(ctx):
     bank = loadbank()
     username = ctx.author.name
     if username in bank:
-        await ctx.reply(f"{ctx.author.mention}'s balance is 💵{bank[username]["balance"]}.")
+        await ctx.reply(f"{ctx.author.mention}'s balance is 💵{bank[username]['balance']}.")
         stocks = [f"{ticker}: {amount}" for ticker, amount in bank[username].items() if ticker != "balance"]
         if stocks:
             await ctx.reply (f"{ctx.author.mention} owns these stocks: " + ", ".join(stocks))
     else:
         start(username)
-        await ctx.reply(f"Welcome, {ctx.author.mention}! Your starting balance is 💵100.")
+        await ctx.reply(f"Welcome, {ctx.author.mention}! Your starting balance is 💵{startbalance}.")
 
 @bot.command(
         name="work",
@@ -75,7 +86,7 @@ async def work(ctx):
     if username not in bank:
         start(username)
         bank = loadbank()
-        await ctx.reply(f"Welcome, {ctx.author.mention}! Your starting balance is 💵100.")
+        await ctx.reply(f"Welcome, {ctx.author.mention}! Your starting balance is 💵{startbalance}.")
     
     bank[username]["balance"] += earned
     savebank(bank)
@@ -132,15 +143,28 @@ async def pay(ctx, receivername, amount):
         help="Buys some stocks using 💵."
 )
 async def buystock(ctx, ticker, amount):
+    try:
+        amount = float(amount)
+    except ValueError:
+        await ctx.reply("Amount must be a positive number.")
+        return
+    
+    if amount <= 0:
+        await ctx.reply("Amount must be a positive number.")
+        return
+    
     bank = loadbank()
     username = ctx.author.name
-    amount = float(amount)
     ticker = str(ticker).upper()
     if username not in bank:
         start(username)
         bank = loadbank()
-        await ctx.reply(f"Welcome, {ctx.author.mention}! Your starting balance is 💵100.")
-    price = round(yf.Ticker(ticker).history(period="1d")["Close"].iloc[0], 2)
+        await ctx.reply(f"Welcome, {ctx.author.mention}! Your starting balance is 💵{startbalance}.")
+    try:
+        price = round(yf.Ticker(ticker).history(period="1d")["Close"].iloc[0], 2)
+    except IndexError:
+        await ctx.reply("No data found on given ticker, possibly delisted.")
+        return
     if price * amount <= bank[username]["balance"]:
         bank[username]["balance"] = round(bank[username].get("balance", 0) - (price * amount), 2)
         bank[username][ticker] = round(bank[username].get(ticker, 0) + amount, 4)
@@ -154,20 +178,33 @@ async def buystock(ctx, ticker, amount):
         help="Sells some stocks earning 💵."
 )
 async def sellstock(ctx, ticker, amount):
+    try:
+        if amount != "all":
+            amount = float(amount)
+    except ValueError:
+        await ctx.reply('Amount must be a positive number, or "all".')
+        return
+    
+    if amount <= 0:
+        await ctx.reply('Amount must be a positive number, or "all".')
+        return
+    
     bank = loadbank()
     username = ctx.author.name
-    if amount != "all":
-        amount = float(amount)
     ticker = str(ticker).upper()
     if username not in bank:
         start(username)
         bank = loadbank()
-        await ctx.reply(f"Welcome, {ctx.author.mention}! Your starting balance is 💵100.")
-        await ctx.reply("AAGHHHHHHHHH WHYYYY THIS SHOULD NOT BE HAPPENNING")
+        await ctx.reply(f"Welcome, {ctx.author.mention}! Your starting balance is 💵{startbalance}.")
+        await ctx.reply("error")
     if ticker not in bank[username]:
         await ctx.reply(f"{ctx.author.mention} does not own any shares of {ticker}.")
         return
-    price = round(yf.Ticker(ticker).history(period="1d")["Close"].iloc[0], 2)
+    try:
+        price = round(yf.Ticker(ticker).history(period="1d")["Close"].iloc[0], 2)
+    except IndexError:
+        await ctx.reply("No data found on given ticker, possibly delisted.")
+        return
     if amount == "all":
         amount = bank[username][ticker]
     if amount <= bank[username][ticker]:
