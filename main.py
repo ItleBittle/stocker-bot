@@ -150,6 +150,26 @@ async def pay(ctx, receivername, amount):
 
 
 
+#ADDMONEY
+@bot.command(
+        name="addmoney",
+        help="Admin command to add 💵."
+)
+async def addmoney(ctx):
+    ctx.reply("cmd in development")
+
+
+
+#REMOVEMONEY
+@bot.command(
+        name="removemoney",
+        help="Admin command to remove 💵."
+)
+async def removemoney(ctx):
+    ctx.reply("cmd in development")
+
+
+
 #BUYSTOCK
 @bot.command(
         name="buystock",
