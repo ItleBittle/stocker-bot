@@ -224,11 +224,12 @@ async def sellstock(ctx, ticker, amount):
     try:
         if amount != "all":
             amount = float(amount)
+
+            if amount <= 0:
+                await ctx.reply('Amount must be a positive number, or "all".')
+                return
+            
     except ValueError:
-        await ctx.reply('Amount must be a positive number, or "all".')
-        return
-    
-    if amount <= 0:
         await ctx.reply('Amount must be a positive number, or "all".')
         return
     
