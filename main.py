@@ -12,7 +12,7 @@ maxwork = 25
 minwork = 5
 
 load_dotenv()
-token = os.getenv("TOKEN")
+token = os.getenv("DISCORD_TOKEN")
 
 handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")
 
@@ -67,7 +67,7 @@ async def balance(ctx):
 
         if stocks:
             await ctx.reply (f"{ctx.author.mention} owns these stocks: " + ", ".join(stocks))
-            
+
     else:
         start(username)
         await ctx.reply(f"Welcome, {ctx.author.mention}! Your starting balance is 💵{startbalance}.")
